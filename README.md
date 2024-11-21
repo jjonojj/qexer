@@ -8,7 +8,8 @@ src/main.rs
 use qexer;
 
 fn main() {
-  let mut q = qexer::Tokenizer::new("int main(int argc, char** argv) { printf("hello world!"); }");
+  let mut q =
+    qexer::Tokenizer::new("int main(int argc, char** argv) { printf("hello world!"); }");
   let mut tok = qexer::Token::None;
   whlie tok != qexer::Token::EOF {
     tok = q.next();
