@@ -5,13 +5,13 @@ handling of string literals is very bad yet, since i didnt need that yet for my 
 
 src/main.rs
 ```rust
-use qexer;
+mod qexer;
 
 fn main() {
   let mut q =
     qexer::Tokenizer::new("int main(int argc, char** argv) { printf(\"hello world!\"); }");
   let mut tok = qexer::Token::None;
-  whlie tok != qexer::Token::EOF {
+  while tok != qexer::Token::EOF {
     tok = q.next();
     printf("{}", tok);
   }
