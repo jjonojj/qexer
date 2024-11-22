@@ -13,7 +13,7 @@ fn main() {
   let mut tok = qexer::Token::None;
   while tok != qexer::Token::EOF {
     tok = q.next();
-    printf("{}", tok);
+    println!("{}", tok);
   }
 }
 
