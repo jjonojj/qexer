@@ -1,11 +1,12 @@
 // the tokenizer.
 #![allow(dead_code)]
 
-use std::fmt::{write, Display};
+use std::fmt::Display;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Token {
     Str(String),
+    StrLit(String), // TODO
     Num(String),
 
     // keywords
@@ -18,10 +19,13 @@ pub enum Token {
     RParen,
     LBrace,
     RBrace,
+    LSqBracket,
+    RSqBracket,
     SemiC,
     Colon,
     DoubleColon,
     ExclMark,
+    QuestMark,
     Eq,
     Comma,
 
@@ -31,8 +35,12 @@ pub enum Token {
     BSlash,
     Plus,
     Minus,
-    DblQuote,
+
+    //
     Quote,
+    Ampersand,
+    CommAt,
+    Dollar,
 
     //
     EOF,
@@ -45,6 +53,7 @@ impl Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Token::Str(val) => write!(f, "string(value: {val})"),
+            Token::StrLit(val) => write!(f, "string literal(value: {val})"),
             Token::Num(val) => write!(f, "number(value: {val})"),
             Token::Fn => write!(f, "function"),
             Token::Let => write!(f, "let keyword"),
@@ -53,10 +62,13 @@ impl Display for Token {
             Token::RParen => write!(f, "right parenthesis"),
             Token::LBrace => write!(f, "left brace"),
             Token::RBrace => write!(f, "right brace"),
+            Token::LSqBracket => write!(f, "left square bracket"),
+            Token::RSqBracket => write!(f, "right square bracket"),
             Token::SemiC => write!(f, "semicolon"),
             Token::Colon => write!(f, "colon"),
             Token::DoubleColon => write!(f, "double colon"),
             Token::ExclMark => write!(f, "exclamation mark"),
+            Token::QuestMark => write!(f, "question mark"),
             Token::Eq => write!(f, "equal sign"),
             Token::Comma => write!(f, "comma"),
 
@@ -66,8 +78,10 @@ impl Display for Token {
             Token::Plus => write!(f, "plus"),
             Token::Minus => write!(f, "minus"),
 
-            Token::DblQuote => write!(f, "double quote"),
             Token::Quote => write!(f, "single quote"),
+            Token::Ampersand => write!(f, "ampersand"),
+            Token::CommAt => write!(f, "at symbol"),
+            Token::Dollar => write!(f, "dollar sign"),
 
             Token::EOF => write!(f, "end of file"),
             _ => write!(f, "undefined / none"),
@@ -79,6 +93,7 @@ impl Display for Token {
 pub struct Tokenizer {
     src: String,
     idx: usize,
+    comment_char: char,
 }
 
 impl Tokenizer {
@@ -86,6 +101,7 @@ impl Tokenizer {
         Self {
             src: input.to_owned(),
             idx: 0,
+            comment_char: ';',
         }
     }
 
@@ -120,7 +136,28 @@ impl Tokenizer {
         &self.src[start..end]
     }
 
-    pub fn next(&mut self) -> Token {
+    fn get_til_dblcolon(&mut self) -> &str {
+        let start = self.idx;
+        while self.current() != '"' {
+            if self.current() == '\0' {
+                panic!("encountered eof while parsing string literal");
+            }
+            self.advance();
+        }
+
+        let end = self.idx;
+        &self.src[start..end]
+    }
+
+    fn advance_til_newline(&mut self) {
+        while self.current() != '\n' {
+            self.advance();
+        }
+
+        self.advance();
+    }
+
+    fn strip(&mut self) {
         while self.current() == ' '
             || self.current() == '\n'
             || self.current() == '\t'
@@ -128,6 +165,14 @@ impl Tokenizer {
         {
             self.advance();
         }
+    }
+
+    pub fn next(&mut self) -> Token {
+        self.strip();
+        if self.current() == self.comment_char {
+            self.advance_til_newline();
+        }
+        self.strip();
         match self.current() {
             'a'..='z' | 'A'..='Z' => {
                 let res = self.get_str();
@@ -155,6 +200,14 @@ impl Tokenizer {
                 self.advance();
                 Token::RBrace
             }
+            '[' => {
+                self.advance();
+                Token::LSqBracket
+            }
+            ']' => {
+                self.advance();
+                Token::RSqBracket
+            }
             ';' => {
                 self.advance();
                 Token::SemiC
@@ -171,6 +224,10 @@ impl Tokenizer {
             '!' => {
                 self.advance();
                 Token::ExclMark
+            }
+            '?' => {
+                self.advance();
+                Token::QuestMark
             }
             '=' => {
                 self.advance();
@@ -202,11 +259,25 @@ impl Tokenizer {
             }
             '"' => {
                 self.advance();
-                Token::DblQuote
+                let text = self.get_til_dblcolon().to_owned();
+                self.advance();
+                Token::StrLit(text)
             }
             '\'' => {
                 self.advance();
                 Token::Quote
+            }
+            '&' => {
+                self.advance();
+                Token::Ampersand
+            }
+            '@' => {
+                self.advance();
+                Token::CommAt
+            }
+            '$' => {
+                self.advance();
+                Token::Dollar
             }
 
             '\0' => Token::EOF,
